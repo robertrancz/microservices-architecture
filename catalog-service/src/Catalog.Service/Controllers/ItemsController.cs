@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Catalog.Contracts;
 using Catalog.Service.Dtos;
 using Catalog.Service.Entities;
 using Catalog.Service.Extensions;
+using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using Services.Common;
 
@@ -15,10 +17,12 @@ namespace Catalog.Service.Controllers
     public class ItemsController : ControllerBase
     {
         private readonly IRepository<Item> repository;
+        //private readonly IPublishEndpoint publishEndpoint;
 
-        public ItemsController(IRepository<Item> repository)
+        public ItemsController(IRepository<Item> repository/*, IPublishEndpoint publishEndpoint*/)
         {
             this.repository = repository;
+            //this.publishEndpoint = publishEndpoint;
         }
 
         // GET /items
@@ -53,11 +57,14 @@ namespace Catalog.Service.Controllers
             {
                 Id = Guid.NewGuid(),
                 Name = createItemDto.Name,
+                Description = createItemDto.Description,
                 Price = createItemDto.Price,
                 CreatedDate = DateTimeOffset.UtcNow
             };
 
             await repository.CreateAsync(item);
+
+            //await publishEndpoint.Publish(new CatalogItemCreated(item.Id, item.Name, item.Description));
 
             return CreatedAtAction(nameof(GetItemAsync), new { id = item.Id }, item.AsDto());
         }
@@ -77,6 +84,7 @@ namespace Catalog.Service.Controllers
             Item updatedItem = existingItem with
             {
                 Name = updatedItemDto.Name,
+                Description = updatedItemDto.Description,
                 Price = updatedItemDto.Price
             };
 

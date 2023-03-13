@@ -16,6 +16,7 @@ namespace Catalog.Service.Extensions
                 Id = item.Id,
                 Name = item.Name,
                 Price = item.Price,
+                Description = item.Description,
                 CreatedDate = item.CreatedDate
             };
         }
