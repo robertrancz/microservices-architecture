@@ -17,12 +17,12 @@ namespace Catalog.Service.Controllers
     public class ItemsController : ControllerBase
     {
         private readonly IRepository<Item> repository;
-        //private readonly IPublishEndpoint publishEndpoint;
+        private readonly IPublishEndpoint publishEndpoint;
 
-        public ItemsController(IRepository<Item> repository/*, IPublishEndpoint publishEndpoint*/)
+        public ItemsController(IRepository<Item> repository, IPublishEndpoint publishEndpoint)
         {
             this.repository = repository;
-            //this.publishEndpoint = publishEndpoint;
+            this.publishEndpoint = publishEndpoint;
         }
 
         // GET /items
@@ -64,7 +64,7 @@ namespace Catalog.Service.Controllers
 
             await repository.CreateAsync(item);
 
-            //await publishEndpoint.Publish(new CatalogItemCreated(item.Id, item.Name, item.Description));
+            await publishEndpoint.Publish(new CatalogItemCreated(item.Id, item.Name, item.Description));
 
             return CreatedAtAction(nameof(GetItemAsync), new { id = item.Id }, item.AsDto());
         }
@@ -90,6 +90,8 @@ namespace Catalog.Service.Controllers
 
             await repository.UpdateAsync(updatedItem);
 
+            await publishEndpoint.Publish(new CatalogItemUpdated(updatedItem.Id, updatedItem.Name, updatedItem.Description));
+
             return NoContent();
         }
 
@@ -105,6 +107,8 @@ namespace Catalog.Service.Controllers
             }
 
             await repository.RemoveAsync(id);
+
+            await publishEndpoint.Publish(new CatalogItemDeleted(id));
 
             return NoContent();
         }
