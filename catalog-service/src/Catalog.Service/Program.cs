@@ -1,10 +1,16 @@
 using Catalog.Service.Entities;
+using Services.Common.Logging;
 using Services.Common.MassTransit;
 using Services.Common.MongoDB;
+using Services.Common.OpenTelemetry;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddSeqLogging(builder.Configuration)
+                .AddTracing(builder.Configuration)
+                .AddMetrics(builder.Configuration);
+
 builder.Services.AddMongo()
                 .AddMongoRepository<Item>("Items");
 
@@ -26,6 +32,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Catalog v1"));
 }
+
+app.UseOpenTelemetryPrometheusScrapingEndpoint();
 
 app.UseHttpsRedirection();
 

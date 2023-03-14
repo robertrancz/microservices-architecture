@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Threading.Tasks;
 using Catalog.Contracts;
@@ -9,6 +10,7 @@ using Catalog.Service.Extensions;
 using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using Services.Common;
+using Services.Common.Settings;
 
 namespace Catalog.Service.Controllers
 {
@@ -18,11 +20,18 @@ namespace Catalog.Service.Controllers
     {
         private readonly IRepository<Item> repository;
         private readonly IPublishEndpoint publishEndpoint;
+        private readonly Counter<int> createItemCounter, updateItemCounter, deleteItemCounter;
 
-        public ItemsController(IRepository<Item> repository, IPublishEndpoint publishEndpoint)
+        public ItemsController(IRepository<Item> repository, IPublishEndpoint publishEndpoint, IConfiguration configuration)
         {
             this.repository = repository;
             this.publishEndpoint = publishEndpoint;
+
+            var serviceSettings = configuration.GetSection(nameof(ServiceSettings)).Get<ServiceSettings>();
+            var meter = new Meter(serviceSettings.ServiceName);
+            createItemCounter = meter.CreateCounter<int>("CatalogItemCreated");
+            updateItemCounter = meter.CreateCounter<int>("CatalogItemUpdated");
+            deleteItemCounter = meter.CreateCounter<int>("CatalogItemDeleted");
         }
 
         // GET /items
@@ -64,6 +73,8 @@ namespace Catalog.Service.Controllers
 
             await repository.CreateAsync(item);
 
+            createItemCounter.Add(1, new KeyValuePair<string, object?>(nameof(item.Id), item.Id));
+
             await publishEndpoint.Publish(new CatalogItemCreated(item.Id, item.Name, item.Description));
 
             return CreatedAtAction(nameof(GetItemAsync), new { id = item.Id }, item.AsDto());
@@ -90,6 +101,8 @@ namespace Catalog.Service.Controllers
 
             await repository.UpdateAsync(updatedItem);
 
+            updateItemCounter.Add(1, new KeyValuePair<string, object?>(nameof(existingItem.Id), existingItem.Id));
+
             await publishEndpoint.Publish(new CatalogItemUpdated(updatedItem.Id, updatedItem.Name, updatedItem.Description));
 
             return NoContent();
@@ -107,6 +120,8 @@ namespace Catalog.Service.Controllers
             }
 
             await repository.RemoveAsync(id);
+
+            deleteItemCounter.Add(1, new KeyValuePair<string, object?>(nameof(existingItem.Id), existingItem.Id));
 
             await publishEndpoint.Publish(new CatalogItemDeleted(id));
 
