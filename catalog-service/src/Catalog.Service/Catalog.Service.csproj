@@ -7,12 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Services.Common" Version="1.5.0" />
+    <PackageReference Include="Services.Common" Version="1.11.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
+    <!-- Added to get the correct version in docker container. For some reason version 6.0.1 is retrievd by docker build. -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\service-contracts\Catalog.Contracts\Catalog.Contracts.csproj" />
+    <ProjectReference Include="..\Catalog.Contracts\Catalog.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

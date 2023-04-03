@@ -1,12 +1,18 @@
 using Catalog.Service.Entities;
+using Catalog.Service.Metrics;
+using OpenTelemetry;
+using OpenTelemetry.Metrics;
 using Services.Common.Logging;
 using Services.Common.MassTransit;
 using Services.Common.MongoDB;
 using Services.Common.OpenTelemetry;
+using Services.Common.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddSingleton<OtelMetrics>();
+
 builder.Services.AddSeqLogging(builder.Configuration)
                 .AddTracing(builder.Configuration)
                 .AddMetrics(builder.Configuration);
