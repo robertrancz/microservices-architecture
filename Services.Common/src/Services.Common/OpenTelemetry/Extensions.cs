@@ -7,8 +7,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
 using Services.Common.Settings;
+using OpenTelemetry.Trace;
 
 namespace Services.Common.OpenTelemetry
 {
@@ -23,9 +23,7 @@ namespace Services.Common.OpenTelemetry
 
                 builder.AddSource(serviceSettings.ServiceName)
                         .AddSource("MassTransit")
-                        .SetResourceBuilder(
-                            ResourceBuilder.CreateDefault()
-                                            .AddService(serviceName: serviceSettings.ServiceName))
+                        .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceSettings.ServiceName))
                         .AddHttpClientInstrumentation()
                         .AddAspNetCoreInstrumentation()
                         .AddJaegerExporter(options =>
@@ -48,9 +46,15 @@ namespace Services.Common.OpenTelemetry
 
                 builder.AddMeter(serviceSettings.ServiceName)
                         .AddMeter("MassTransit")
-                        .AddHttpClientInstrumentation()
+                        //.AddRuntimeInstrumentation()
                         .AddAspNetCoreInstrumentation()
-                        .AddPrometheusExporter();
+                        .AddHttpClientInstrumentation()
+                        .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceSettings.ServiceName))
+                        .AddPrometheusExporter(/*options => {
+                            options.StartHttpListener = true;
+                            options.HttpListenerPrefixes = new[] { "http://localhost:9184/" };
+                        }*/)
+                        .AddOtlpExporter(options => { options.Endpoint = new Uri("http://otel-collector:4317"); });
             });
             
             return services;
