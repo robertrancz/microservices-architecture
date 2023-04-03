@@ -1,6 +1,26 @@
 version: "3.8"
 
 services:
+  catalog-service:
+    image: rrobi/catalog-service:latest
+    build:
+      context: ../catalog-service/src/
+      dockerfile: Catalog.Service/Dockerfile
+    ports:
+      - 7100:443
+      - 7101:80
+    env_file:
+      - ./otel/otel-dotnet.env
+    environment:
+      - ASPNETCORE_ENVIRONMENT=docker
+      - OTEL_SERVICE_NAME="catalog-service"
+      - OTEL_EXPORTER_OTLP_ENDPOINT="http://otel-collector:3318"
+      - SERVICE_URL="http://catalog-service:80"
+    depends_on:
+      - mongo
+      - rabbitmq
+      - otel-collector
+
   mongo:
     image: mongo
     container_name: mongo
@@ -16,6 +36,7 @@ services:
       - 5672:5672
       - 15672:15672
     volumes:
+      - ./rabbitmq/plugins:/etc/rabbitmq/enabled_plugins
       - rabbitmqdata:/var/lib/rabbitmq
     hostname: rabbitmq
 
@@ -40,10 +61,30 @@ services:
       - 14250:14250
       - 14268:14268
       - 16686:16686
+
+  # OTEL Collector to receive logs, metrics and traces from the application
+  otel-collector:
+    image: otel/opentelemetry-collector
+    command: [ "--config=/etc/otel-collector.yaml" ]
+    volumes:
+      - ./otel/otel-collector.yaml:/etc/otel-collector.yaml
+    ports:
+      #- 3317:3317   # OTLP gRPC receiver
+      #- 3318:3318   # OTLP HTTP receiver
+      - 9201:9201   # Prometheus receiver
+      - 8888:8888   # Prometheus metrics exposed by the collector
+      - 8889:8889   # Prometheus exporter
+    depends_on:
+      - jaeger
+      - prometheus
   
   prometheus:
     image: prom/prometheus
     container_name: prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-remote-write-receiver
+      - --enable-feature=exemplar-storage
     ports: 
       - 9090:9090
     volumes:
@@ -54,10 +95,27 @@ services:
     image: grafana/grafana
     ports:
       - 3000:3000
-    restart: unless-stopped
+    #restart: unless-stopped
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
     volumes:
       - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
       - grafanadata:/var/lib/grafana
+
+  # Exports Traces to Tempo
+  # tempo:
+  #   image: grafana/tempo:latest
+  #   command: [ "-config.file=/etc/tempo.yaml" ]
+  #   volumes:
+  #     - ./tempo/tempo.yaml:/etc/tempo.yaml
+  #     - ./tempodata:/tmp/tempo
+  #   ports:
+  #     - "3200"  # tempo
+  #     - "3317"  # otlp grpc
+  #     - "3318"  # otlp http
 
 volumes:
   mongodbdata:
@@ -65,3 +123,4 @@ volumes:
   seqdata:
   prometheusdata:
   grafanadata:
+  # tempodata:

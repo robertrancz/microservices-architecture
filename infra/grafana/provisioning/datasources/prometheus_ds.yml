@@ -1,6 +1,42 @@
 datasources:
 - name: Prometheus
-  access: proxy
   type: prometheus
+  uid: prometheus
+  access: proxy
+  orgId: 1
   url: http://prometheus:9090
+  basicAuth: false
   isDefault: true
+  version: 1
+  editable: false
+  jsonData:
+    httpMethod: GET
+    exemplarTraceIdDestinations:
+    - name: trace_id
+      datasourceUid: Tempo
+      
+- name: Tempo
+  type: tempo
+  access: proxy
+  orgId: 1
+  url: http://tempo:3200
+  basicAuth: false
+  isDefault: false
+  version: 1
+  editable: false
+  apiVersion: 1
+  uid: tempo
+  jsonData:
+    httpMethod: GET
+    serviceMap:
+      datasourceUid: prometheus
+
+- name: jaeger
+  type: jaeger
+  uid: jaeger
+  access: browser
+  url: http://jaeger:16686
+  isDefault: false
+  version: 1
+  editable: true
+  basicAuth: false
