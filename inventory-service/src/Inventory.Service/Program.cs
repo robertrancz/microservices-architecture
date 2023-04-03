@@ -2,14 +2,20 @@ using Inventory.Service.Clients;
 using Inventory.Service.Entities;
 using Polly;
 using Polly.Timeout;
+using Services.Common.Logging;
 using Services.Common.MassTransit;
 using Services.Common.MongoDB;
+using Services.Common.OpenTelemetry;
 
 var builder = WebApplication.CreateBuilder(args);
 
 ConfigurationManager config = builder.Configuration;
 
 // Add services to the container.
+builder.Services.AddSeqLogging(builder.Configuration)
+                .AddTracing(builder.Configuration)
+                .AddMetrics(builder.Configuration);
+                
 builder.Services.AddMongo()
                 .AddMongoRepository<InventoryItem>("InventoryItems")
                 .AddMongoRepository<CatalogItem>("CatalogItems");
@@ -20,7 +26,9 @@ builder.Services.AddMassTransitWithRabbitMq();
 // For sync service communication
 AddCatalogHttpClient(builder, config);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options => {
+    options.SuppressAsyncSuffixInActionNames = false;            
+});
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -33,6 +41,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseOpenTelemetryPrometheusScrapingEndpoint();
 
 app.UseHttpsRedirection();
 
